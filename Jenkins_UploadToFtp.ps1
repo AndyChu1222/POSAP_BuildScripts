@@ -1,9 +1,10 @@
 
 param(
     [string]$VersionTag,
-    [string]$FtpUser,
-    [string]$FtpPassword
+    [string]$FtpUser
 )
+$FtpPassword = $env:FTP_PASS
+$env:FTP_PASS = $null   # 防止後續誤印
 
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

@@ -30,9 +30,12 @@ pipeline {
        stage('Upload FTP') {
             steps {
                 echo "=== 上傳 FTP (PWsh) ==="
-                bat """
-                pwsh -NoProfile -ExecutionPolicy Bypass -File D:\\POSAP_BuildScripts\\Jenkins_UploadToFtp.ps1 -VersionTag "${VERSION_TAG}" -FtpUser "${FTP_USER}" -FtpPassword "${FTP_PASS}"
-                """
+                bat '''
+
+            pwsh -NoProfile -ExecutionPolicy Bypass ^
+                -File D:\\POSAP_BuildScripts\\Jenkins_UploadToFtp.ps1 ^
+                -VersionTag "%VERSION_TAG%" -FtpUser "%FTP_USER%"
+        '''
             }
         }
 
