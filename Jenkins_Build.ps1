@@ -10,6 +10,8 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 $solutionDir  = $env:Build_Link
 
+git -C $solutionDir status
+
 # 不再手動寫 "點餐通_併版.sln"，改用檔案系統抓真正檔名
 # 如果你希望更精準，可以把 *改成 *併版*.sln
 $solutionItem = Get-ChildItem -LiteralPath $solutionDir -Filter '*.sln' | Select-Object -First 1
