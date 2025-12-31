@@ -54,6 +54,17 @@ Write-Host "目的: $targetDir"
 
 Copy-Item -Path (Join-Path $buildOutput "*") -Destination $targetDir -Recurse -Force
 
+# 新增步驟：移除目標資料夾內的 Xml 資料夾（客戶不需要）
+$xmlDir = Join-Path $targetDir "Xml"
+
+if (Test-Path -LiteralPath $xmlDir) {
+    Write-Host "偵測到不需要的資料夾，準備刪除: $xmlDir"
+    Remove-Item -LiteralPath $xmlDir -Recurse -Force
+    Write-Host "已刪除 Xml 資料夾"
+}
+else {
+    Write-Host "未找到 Xml 資料夾，略過刪除"
+}
 # 壓縮成 POSAP.zip
 Write-Host "=== 建立壓縮檔 POSAP.zip ==="
 
