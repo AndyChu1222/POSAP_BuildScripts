@@ -1,5 +1,7 @@
 param(
-    [string]$VersionTag  # 目前沒用到，但保留參數讓呼叫方式一致
+    [string]$VersionTag,
+
+    [switch]$CleanBinRelease = $true
 )
 
 # 設定輸出為 UTF-8，讓中文訊息在 Jenkins / CMD 正常顯示
@@ -30,13 +32,40 @@ if (-not (Test-Path $msbuildPath)) {
     throw "找不到 MSBuild: $msbuildPath"
 }
 
+function Remove-BinReleaseFolders([string]$root) {
+    Write-Host "=== 清除所有 bin\\Release ==="
+
+    $targets =
+        Get-ChildItem -Path $root -Directory -Recurse -Force -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match "\\bin\\Release$" }
+
+    if (-not $targets) {
+        Write-Host "未找到任何 bin\\Release（可能尚未建置過）"
+        return
+    }
+
+    foreach ($dir in $targets) {
+        try {
+            Write-Host "刪除: $($dir.FullName)"
+            Remove-Item -LiteralPath $dir.FullName -Recurse -Force -ErrorAction Stop
+        }
+        catch {
+            throw "刪除失敗: $($dir.FullName)`n$($_.Exception.Message)"
+        }
+    }
+}
+
+# 先清除 bin\Release
+if ($CleanBinRelease) {
+    Remove-BinReleaseFolders -root $solutionDir
+}
+
+
 Write-Host "=== 開始 NuGet Restore ==="
 Push-Location $solutionDir
 try {
     & "$msbuildPath" $solutionPath `
         /t:Restore `
-        /p:Configuration=Release `
-        "/p:Platform=Any CPU" `
         /m `
         /v:m
 
@@ -51,12 +80,35 @@ if ($restoreExitCode -ne 0) {
 }
 
 Write-Host "=== 開始建置專案 (Release | Any CPU) ==="
+Write-Host "=== Phase 1: Clean (Release | Any CPU) ==="
 Push-Location $solutionDir
 try {
     & "$msbuildPath" $solutionPath `
-        /t:Build `
-        /p:Configuration=Release `
+        "/t:Clean" `
+        "/p:Configuration=Release" `
         "/p:Platform=Any CPU" `
+        /m `
+        /v:m
+
+    $cleanExitCode = $LASTEXITCODE
+}
+finally {
+    Pop-Location
+}
+
+if ($cleanExitCode -ne 0) {
+    throw "MSBuild Clean 失敗 (ExitCode: $cleanExitCode)"
+}
+
+Write-Host "=== Phase 2: Build (Release | Any CPU) ==="
+Push-Location $solutionDir
+try {
+    & "$msbuildPath" $solutionPath `
+        "/t:Build" `
+        "/p:Configuration=Release" `
+        "/p:Platform=Any CPU" `
+        "/p:BuildType=IDE" `
+        "/p:DeterministicSourcePaths=false" `
         /m `
         /v:m
 
@@ -67,7 +119,7 @@ finally {
 }
 
 if ($buildExitCode -ne 0) {
-    throw "MSBuild 建置失敗 (ExitCode: $buildExitCode)"
+    throw "MSBuild Build 失敗 (ExitCode: $buildExitCode)"
 }
 
 Write-Host "=== 建置完成 ==="
